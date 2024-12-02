@@ -1,0 +1,15 @@
+{
+  "name": "aoc-2024",
+  "version": "1.0.0",
+  "description": "AoC 2024",
+  "main": "index.ts",
+  "scripts": {
+    "build": "npx tsc"
+  },
+  "author": "Robbie Luijben",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.10.1",
+    "typescript": "^5.7.2"
+  }
+}
