@@ -10,6 +10,7 @@ export const puzzle = () : Puzzle => {
         first: function (input: string): string | number {
             return sum([...input.matchAll(regex)].map(grp => parseInt(grp[1]!) * parseInt(grp[2]!)));
         },
+
         second: function (input: string): string | number {
             let memory: string = input;
             let nextDoIndex: number = 0;
