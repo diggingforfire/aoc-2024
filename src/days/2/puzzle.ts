@@ -3,8 +3,7 @@ import { splitOnNewLines, splitOnWhiteSpace } from "../../utils/input";
 
 export const puzzle = () : Puzzle => {
     const isSafe = (reportSteps: number[][]) => 
-        reportSteps.some(allLevelsIncreaseOrDecrease) &&
-        reportSteps.some(report => allLevelsDiffBy(report))
+        reportSteps.some(steps => allLevelsIncreaseOrDecrease(steps) && allLevelsDiffBy(steps));
 
     const allLevelsIncreaseOrDecrease = (report: number[]) => 
         report.every(level => level < 0) || report.every(level => level > 0);
