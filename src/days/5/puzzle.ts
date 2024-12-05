@@ -55,7 +55,7 @@ export const puzzle = () : Puzzle => {
 
             const sorter = (a: number, b: number) => {
                 const rule = rules.filter(rule => 
-                    (rule.page1 === a && rule.page2 === b) || (rule.page1 === b && rule.page2 === a))[0];
+                    (rule.page1 === a && rule.page2 === b))[0];
                 return rule?.page1 === a ? -1 : 1;
             }
 
