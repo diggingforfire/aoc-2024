@@ -14,6 +14,7 @@ const readInput = (inputPath: string) : Promise<string> =>
 
 const splitOn = (input: string, separator: string | RegExp) : string[] => input.split(separator).filter(Boolean);
 const splitOnNewLines = (input: string) : string[] => splitOn(input, EOL);
+const splitOnDoubleNewLines = (input: string) : string[] => splitOn(input, `${EOL}${EOL}`);
 const splitOnWhiteSpace = (input: string) : string[] => splitOn(input, /\s+/);
 
-export { readInput, splitOnNewLines, splitOnWhiteSpace };
+export { readInput, splitOnNewLines, splitOnDoubleNewLines, splitOnWhiteSpace };
