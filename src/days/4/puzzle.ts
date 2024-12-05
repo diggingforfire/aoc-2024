@@ -63,7 +63,7 @@ export const puzzle = () : Puzzle => {
 
             const matches = inputToMatches(input, directions, targetWord);
             
-            return matches.length.toString();
+            return matches.length;
         },
 
         second: function (input: string): string | number {
@@ -79,7 +79,7 @@ export const puzzle = () : Puzzle => {
             const centerCoords = matches.map(mas => `${mas.indexY + mas.directionY * 1},${mas.indexX + mas.directionX * 1}`);
             const xmases = Object.values(groupBy(centerCoords, c => c)).filter(grp => grp.length === 2);
             
-            return xmases.length.toString();
+            return xmases.length;
         }
     }
 };
