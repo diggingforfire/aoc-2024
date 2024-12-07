@@ -9,4 +9,19 @@ const groupBy = <T, K extends keyof any>(arr: T[], key: (i: T) => K) =>
       return groups;
     }, {} as Record<K, T[]>);
 
-export { zip, sum, groupBy };
+const combinations = <T>(array: T[]) => 
+  array.flatMap((item1, index) => array.slice(index + 1).map(item2 => ({item1, item2})));
+
+const permutations = <T>(xs: T[]) : T[][] => {
+  if (!xs.length) return [[]];
+  return xs.flatMap(x => {
+    return permutations(xs.filter(v => v!==x)).map(vs => [x, ...vs]);
+  });
+};
+
+function* cartesian<T>(items: T[][]): Generator<T[]> {
+  const remainder = items.length > 1 ? cartesian(items.slice(1)) : [[]];
+  for (let r of remainder) for (let h of items.at(0)!) yield [h, ...r];
+}
+
+export { zip, sum, groupBy, combinations, permutations, cartesian };
