@@ -32,29 +32,85 @@ export const puzzle = () : Puzzle => {
     
     const turnRight = (direction: Direction) : Direction => (direction + 1) % Object.keys(directions).length;
 
-    let c = 0;
-
-    const traverseGrid = (grid: string[][], startPosition: Pos, startDirection: Direction) => {
+    const willLoop = (grid: string[][], startPosition: Pos, startDirection: Direction) => {
         let currentPosition = startPosition;
         let currentDirection = startDirection;
+        let currentValue : string | undefined = '' ;
 
-        while (gridValue(grid, currentPosition)) {
-            grid[currentPosition.y]![currentPosition.x] = 'X';
+        while ((currentValue = gridValue(grid, currentPosition))) {  
+            if (currentValue === currentDirection.toString()) {
+                return true;
+            } else {
+                if (currentValue === '#') {
+                    console.log("not good");
+                }
+                grid[currentPosition.y]![currentPosition.x] = currentDirection.toString();
+            }
 
-            const nextPosition = { 
+            let nextPosition = { 
                 x: currentPosition.x + directions[currentDirection].x, 
                 y: currentPosition.y + directions[currentDirection].y 
             };
 
-            const nextValue = gridValue(grid, nextPosition);
+            while (gridValue(grid, nextPosition) === "#") {
+                currentDirection = turnRight(currentDirection);
+                nextPosition = { 
+                    x: currentPosition.x + directions[currentDirection].x, 
+                    y: currentPosition.y + directions[currentDirection].y 
+                };
+            };
 
-            if (nextValue === "#") {
-                currentDirection = turnRight(currentDirection)
-            }
+            currentPosition.x += directions[currentDirection].x;
+            currentPosition.y += directions[currentDirection].y;  
+        }
+
+        return false;
+    };
+
+    const renderGrid = (grid: string[][]) => {
+        return;
+        const str = grid.flatMap(g => g.join("")).join("\n");
+        console.log("\n");
+        console.log(str);
+    }
+
+    const traverseGrid = (grid: string[][], startPosition: Pos, startDirection: Direction) => {
+        let currentPosition = {...startPosition};
+        let currentDirection = startDirection;
+        const possibleObstructions = new Set<string>();
+
+        while (gridValue(grid, currentPosition)) {
+            grid[currentPosition.y]![currentPosition.x] = currentDirection.toString();
+            renderGrid(grid);
+            
+            let nextPosition = { 
+                x: currentPosition.x + directions[currentDirection].x, 
+                y: currentPosition.y + directions[currentDirection].y 
+            };
+
+            while (gridValue(grid, nextPosition) === "#") {
+                currentDirection = turnRight(currentDirection);
+                nextPosition = { 
+                    x: currentPosition.x + directions[currentDirection].x, 
+                    y: currentPosition.y + directions[currentDirection].y 
+                };
+            };
 
             currentPosition.x += directions[currentDirection].x;
             currentPosition.y += directions[currentDirection].y;
+
+            if (willLoop(grid.map(l => l.slice()), {...currentPosition}, turnRight(currentDirection))) {
+
+                const tmp = { 
+                    x: currentPosition.x + directions[currentDirection].x, 
+                    y: currentPosition.y + directions[currentDirection].y 
+                };
+                
+                possibleObstructions.add(`${tmp.x},${tmp.y}`);   
+            }
         }
+
+        return possibleObstructions.size;
     };
  
     return {
@@ -69,14 +125,13 @@ export const puzzle = () : Puzzle => {
         },
 
         second: function (input: string): string | number {
-            return 0;
             const lines = splitOnNewLines(input);
             const grid = linesToGrid(lines);
             const startPosition: Pos = lines.flatMap((line, y) => [...line!.matchAll(/\^/g)].map(match => ({ y, x: match.index })))[0]!;
  
-            traverseGrid(grid, startPosition, Direction.North);
+            const possibleObstructions = traverseGrid(grid, startPosition, Direction.North);
 
-            return c;
+            return possibleObstructions;
         }
     };
 };
