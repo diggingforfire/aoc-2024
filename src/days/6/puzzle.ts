@@ -36,15 +36,15 @@ export const puzzle = () : Puzzle => {
         let currentPosition = startPosition;
         let currentDirection = startDirection;
         let currentValue : string | undefined = '' ;
-
-        while ((currentValue = gridValue(grid, currentPosition))) {  
-            if (currentValue === currentDirection.toString()) {
+        let i = 0;
+        while ((currentValue = gridValue(grid, currentPosition)) !== undefined) {  
+            if (currentValue.includes(currentDirection.toString()) || i === 100000) {
                 return true;
             } else {
-                if (currentValue === '#') {
+                if (currentValue.includes("#")) {
                     console.log("not good");
                 }
-                grid[currentPosition.y]![currentPosition.x] = currentDirection.toString();
+                //grid[currentPosition.y]![currentPosition.x] += currentDirection.toString();
             }
 
             let nextPosition = { 
@@ -52,7 +52,7 @@ export const puzzle = () : Puzzle => {
                 y: currentPosition.y + directions[currentDirection].y 
             };
 
-            while (gridValue(grid, nextPosition) === "#") {
+            while (gridValue(grid, nextPosition)?.includes("#")) {
                 currentDirection = turnRight(currentDirection);
                 nextPosition = { 
                     x: currentPosition.x + directions[currentDirection].x, 
@@ -62,16 +62,23 @@ export const puzzle = () : Puzzle => {
 
             currentPosition.x += directions[currentDirection].x;
             currentPosition.y += directions[currentDirection].y;  
+            i++;
         }
 
         return false;
     };
 
-    const renderGrid = (grid: string[][]) => {
+    const renderGrid = (grid: string[][], start: Pos) => {
         return;
+        let tmp = grid[start.y]![start.x]!;
+        grid[start.y]![start.x] = '^'
+
         const str = grid.flatMap(g => g.join("")).join("\n");
+
         console.log("\n");
         console.log(str);
+
+        grid[start.y]![start.x] = tmp;
     }
 
     const traverseGrid = (grid: string[][], startPosition: Pos, startDirection: Direction) => {
@@ -79,9 +86,10 @@ export const puzzle = () : Puzzle => {
         let currentDirection = startDirection;
         const possibleObstructions = new Set<string>();
 
-        while (gridValue(grid, currentPosition)) {
-            grid[currentPosition.y]![currentPosition.x] = currentDirection.toString();
-            renderGrid(grid);
+        while (gridValue(grid, currentPosition) !== undefined) {
+            grid[currentPosition.y]![currentPosition.x] += currentDirection.toString();
+            grid[currentPosition.y]![currentPosition.x] = grid[currentPosition.y]![currentPosition.x]?.replaceAll(".", "")!;
+            renderGrid(grid, startPosition);
             
             let nextPosition = { 
                 x: currentPosition.x + directions[currentDirection].x, 
@@ -106,6 +114,11 @@ export const puzzle = () : Puzzle => {
                     y: currentPosition.y + directions[currentDirection].y 
                 };
                 
+                // let tmpp = grid[tmp.y]![tmp.x]!;
+                // grid[tmp.y]![tmp.x] = "O";
+                // renderGrid(grid, startPosition);
+                // grid[tmp.y]![tmp.x] = tmpp;
+
                 possibleObstructions.add(`${tmp.x},${tmp.y}`);   
             }
         }
@@ -115,6 +128,7 @@ export const puzzle = () : Puzzle => {
  
     return {
         first: function (input: string): string | number {
+            return 0;
             const lines = splitOnNewLines(input);
             const grid = linesToGrid(lines);
             const startPosition: Pos = lines.flatMap((line, y) => [...line!.matchAll(/\^/g)].map(match => ({ y, x: match.index })))[0]!;
