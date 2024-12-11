@@ -1,5 +1,4 @@
 import Puzzle from "../../types/Puzzle";
-import { sum } from "../../utils/collection";
 import { splitOnNewLines } from "../../utils/input";
 
 export const puzzle = () : Puzzle => {
@@ -10,54 +9,46 @@ export const puzzle = () : Puzzle => {
         { x: -1, y: 0}
     ];
 
-    const ps = new Set<string>();
+    const inputToGrid = (input: string) => 
+        splitOnNewLines(input).map(line => line.split("").map(char => parseInt(char)));
 
-    const search = (pos: {x: number, y: number, c: number}, grid: number[][], ps: {x: number, y: number, c: number}[]) : void => {
-        if (pos.c === 9) {
-            ps.push(pos);
-            return;
-        }
+    const getTrailheads = (grid: number[][]) =>
+        grid.flatMap((line, y) => 
+            line.map((char, x) => ({ x, y, n: char })).filter(pos => pos.n === 0));
 
-        const nextPositions = directions.map(d => ({
-            x: pos.x + d.x,
-            y: pos.y + d.y
-        }));
+    const withinBounds = (position: {x: number, y: number}, grid: number[][]) => 
+        position.y >= 0 && position.y < grid.length && position.x >= 0 && position.x < grid[0]!.length;
 
-        const next = nextPositions.filter(p => 
-            p.x >=0 && p.x < grid[0]!.length && 
-            p.y >= 0 && p.y < grid.length)
-            .map(p => ({
-                x: p.x,
-                y: p.y,
-                c: grid[p.y]![p.x]!
-            })).filter(p => !!p.c && p.c === pos.c + 1);
+    const getNeighbourPositions = (position: {x: number, y: number}, directions: {x: number, y: number}[]) =>
+        directions.map(direction => ({ x: position.x + direction.x, y: position.y + direction.y }));
 
-        if (!next.length) {
-            return;
-        }
+    const getNeighbours = (positions: {x: number, y: number}[], grid: number[][], position: {x: number, y: number, n: number}) =>
+        positions
+            .filter(neighbour => withinBounds(neighbour, grid))
+            .map(neighbour => ({x: neighbour.x, y: neighbour.y, n: grid[neighbour.y]![neighbour.x]!}))
+            .filter(neighbour => neighbour.n && neighbour.n === position.n + 1);
+    
+    const getHikes = (startPosition: {x: number, y: number, n: number}, grid: number[][]) : {x: number, y: number, n: number}[] => {
+        if (startPosition.n === 9) return [startPosition];
         
-        next.map(n => search(n, grid, ps));
+        const neighbourPositions = getNeighbourPositions(startPosition, directions);
+        const neighbours = getNeighbours(neighbourPositions, grid, startPosition);        
+       
+        return neighbours.flatMap(neighbour => getHikes(neighbour, grid));
     }
 
     return {
         first: function (input: string): string | number {
-            const grid = splitOnNewLines(input).map(line => line.split("").map(c => parseInt(c)));
-            const trailheads = grid.flatMap((line, y) => line.map((c, x) => ({
-                x,
-                y,
-                c
-              })).filter(p => p.c === 0));
-
-
-            const test = trailheads.flatMap(t => {
-                const hikes: {x: number, y: number, c: number}[] = [];
-                search(t, grid, hikes);
-                return hikes;
-            });
-            return 0;
+            const grid = inputToGrid(input);
+            const trailheads = getTrailheads(grid);
+            const hikes = trailheads.flatMap(trailhead => [...new Set(getHikes(trailhead, grid).map(hike => `${hike.x},${hike.y}`))]);
+            return hikes.length
         },
         second: function (input: string): string | number {
-            return 0;
+            const grid = inputToGrid(input);
+            const trailheads = getTrailheads(grid);
+            const hikes = trailheads.flatMap(trailhead => getHikes(trailhead, grid));
+            return hikes.length;
         }
     }
 

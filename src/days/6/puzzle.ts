@@ -1,6 +1,4 @@
-import { Dir } from "fs";
 import Puzzle from "../../types/Puzzle";
-import { groupBy } from "../../utils/collection";
 import { splitOnNewLines } from "../../utils/input";
 
 type Pos = {
@@ -18,6 +16,9 @@ enum Direction {
 type Directions = Record<Direction, Pos>;
  
 export const puzzle = () : Puzzle => {
+    const visitedMarker = "X";
+    const obstacleMarker = "#";
+
     const directions: Directions = {
         0: { x: 0, y: - 1},
         1: { x: 1, y: 0 },
@@ -32,85 +33,37 @@ export const puzzle = () : Puzzle => {
     
     const turnRight = (direction: Direction) : Direction => (direction + 1) % Object.keys(directions).length;
 
-    const willLoop = (grid: string[][], startPosition: Pos, startDirection: Direction) => {
-        let currentPosition = startPosition;
+    const markAsVisited = (y: number, x: number, grid: string[][]) => grid[y]![x] = visitedMarker;
+
+    const turnAwayFromObstacle = (direction: Direction, position: Pos, grid: string[][]) : Direction => {
+        let nextPosition = { x: position.x + directions[direction].x, y: position.y + directions[direction].y };
+
+        while (gridValue(grid, nextPosition) === obstacleMarker) {
+            direction = turnRight(direction);
+            nextPosition = { x: position.x + directions[direction].x, y: position.y + directions[direction].y };
+        };
+
+        return direction;
+    }
+
+    const move = (position: Pos, direction: Direction) => ({ x: position.x + directions[direction].x, y: position.y + directions[direction].y });
+
+    const traverseGridGetsStuck = (grid: string[][], startPosition: Pos, startDirection: Direction) => {
+        let currentPosition = {...startPosition};
         let currentDirection = startDirection;
-        let currentValue : string | undefined = '' ;
 
-        while ((currentValue = gridValue(grid, currentPosition))) {  
-            if (currentValue === currentDirection.toString()) {
-                return true;
-            } else {
-                if (currentValue === '#') {
-                    console.log("not good");
-                }
-                grid[currentPosition.y]![currentPosition.x] = currentDirection.toString();
-            }
+        const maxCycleTreshold = grid.length * grid[0]!.length;
+        let loopIndex = 0;
 
-            let nextPosition = { 
-                x: currentPosition.x + directions[currentDirection].x, 
-                y: currentPosition.y + directions[currentDirection].y 
-            };
+        for (; gridValue(grid, currentPosition); loopIndex++) {
+            if (loopIndex === maxCycleTreshold)  return true; // TODO: actual cycle detection
 
-            while (gridValue(grid, nextPosition) === "#") {
-                currentDirection = turnRight(currentDirection);
-                nextPosition = { 
-                    x: currentPosition.x + directions[currentDirection].x, 
-                    y: currentPosition.y + directions[currentDirection].y 
-                };
-            };
-
-            currentPosition.x += directions[currentDirection].x;
-            currentPosition.y += directions[currentDirection].y;  
+            markAsVisited(currentPosition.y, currentPosition.x, grid);
+            currentDirection = turnAwayFromObstacle(currentDirection, currentPosition, grid);
+            currentPosition = move(currentPosition, currentDirection);
         }
 
         return false;
-    };
-
-    const renderGrid = (grid: string[][]) => {
-        return;
-        const str = grid.flatMap(g => g.join("")).join("\n");
-        console.log("\n");
-        console.log(str);
-    }
-
-    const traverseGrid = (grid: string[][], startPosition: Pos, startDirection: Direction) => {
-        let currentPosition = {...startPosition};
-        let currentDirection = startDirection;
-        const possibleObstructions = new Set<string>();
-
-        while (gridValue(grid, currentPosition)) {
-            grid[currentPosition.y]![currentPosition.x] = currentDirection.toString();
-            renderGrid(grid);
-            
-            let nextPosition = { 
-                x: currentPosition.x + directions[currentDirection].x, 
-                y: currentPosition.y + directions[currentDirection].y 
-            };
-
-            while (gridValue(grid, nextPosition) === "#") {
-                currentDirection = turnRight(currentDirection);
-                nextPosition = { 
-                    x: currentPosition.x + directions[currentDirection].x, 
-                    y: currentPosition.y + directions[currentDirection].y 
-                };
-            };
-
-            currentPosition.x += directions[currentDirection].x;
-            currentPosition.y += directions[currentDirection].y;
-
-            if (willLoop(grid.map(l => l.slice()), {...currentPosition}, turnRight(currentDirection))) {
-
-                const tmp = { 
-                    x: currentPosition.x + directions[currentDirection].x, 
-                    y: currentPosition.y + directions[currentDirection].y 
-                };
-                
-                possibleObstructions.add(`${tmp.x},${tmp.y}`);   
-            }
-        }
-
-        return possibleObstructions.size;
     };
  
     return {
@@ -119,9 +72,9 @@ export const puzzle = () : Puzzle => {
             const grid = linesToGrid(lines);
             const startPosition: Pos = lines.flatMap((line, y) => [...line!.matchAll(/\^/g)].map(match => ({ y, x: match.index })))[0]!;
  
-            traverseGrid(grid, startPosition, Direction.North);
+            traverseGridGetsStuck(grid, startPosition, Direction.North);
 
-            return grid.flatMap(line => line.map(c => c)).filter(c => c === "X").length;
+            return grid.flatMap(line => line.map(char => char)).filter(char => char === visitedMarker).length;
         },
 
         second: function (input: string): string | number {
@@ -129,9 +82,23 @@ export const puzzle = () : Puzzle => {
             const grid = linesToGrid(lines);
             const startPosition: Pos = lines.flatMap((line, y) => [...line!.matchAll(/\^/g)].map(match => ({ y, x: match.index })))[0]!;
  
-            const possibleObstructions = traverseGrid(grid, startPosition, Direction.North);
+            const distinctObstacleCoordinates = new Set<string>();
 
-            return possibleObstructions;
+            for (let y = 0; y < grid.length; y++) {
+                for (let x = 0; x < grid[y]!.length; x++) {
+
+                    if (gridValue(grid, { x:x, y:y}) !== obstacleMarker && !(x === startPosition.x && y === startPosition.y) ) {
+                        const gridCopy = grid.map(l => l.slice());
+                        gridCopy[y]![x] = obstacleMarker;
+                        
+                        if (traverseGridGetsStuck(gridCopy, startPosition, Direction.North)) {
+                            distinctObstacleCoordinates.add(`${x},${y}`);
+                        }
+                    }
+                }
+            }
+
+            return distinctObstacleCoordinates.size;
         }
     };
 };
