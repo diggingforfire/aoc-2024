@@ -38,29 +38,62 @@ export const puzzle = () : Puzzle => {
         return cheapest;
     };
 
+    const inputToMachines = (input: string, prizeInflation: number = 0) => {
+        const machines = splitOnDoubleNewLines(input).map(config => splitOnNewLines(config)).map(config => ({         
+            a: {
+                x: parseInt([...config[0]!.matchAll(/X\+(\d+)/g)][0]![1]!),
+                y: parseInt([...config[0]!.matchAll(/Y\+(\d+)/g)][0]![1]!),
+            },
+            b: {
+                x: parseInt([...config[1]!.matchAll(/X\+(\d+)/g)][0]![1]!),
+                y: parseInt([...config[1]!.matchAll(/Y\+(\d+)/g)][0]![1]!),
+            },
+            prize: {
+                x: parseInt([...config[2]!.matchAll(/X\=(\d+)/g)][0]![1]!) + prizeInflation,
+                y: parseInt([...config[2]!.matchAll(/Y\=(\d+)/g)][0]![1]!) + prizeInflation,
+            }
+        
+        }));
+
+        return machines;
+    };
+
+    const gcd_mul = (a: number, b: number, c: number) => {
+        return gcd(a, gcd(b, c));
+    }
+
+    const gcd = (a: number, b: number) => {
+        if (!b) {
+            return a;
+        }
+
+        return gcd(b, a % b);
+    }
+
     return {
         first: function (input: string): string | number {
-            const machines = splitOnDoubleNewLines(input).map(config => splitOnNewLines(config)).map(config => ({
-                
-                    a: {
-                        x: parseInt([...config[0]!.matchAll(/X\+(\d+)/g)][0]![1]!),
-                        y: parseInt([...config[0]!.matchAll(/Y\+(\d+)/g)][0]![1]!),
-                    },
-                    b: {
-                        x: parseInt([...config[1]!.matchAll(/X\+(\d+)/g)][0]![1]!),
-                        y: parseInt([...config[1]!.matchAll(/Y\+(\d+)/g)][0]![1]!),
-                    },
-                    prize: {
-                        x: parseInt([...config[2]!.matchAll(/X\=(\d+)/g)][0]![1]!),
-                        y: parseInt([...config[2]!.matchAll(/Y\=(\d+)/g)][0]![1]!),
-                    }
-                
-            }));
-            
+            const machines = inputToMachines(input);
+
+            for (const machine of machines) {
+                const gcd_x = gcd_mul(machine.a.x, machine.b.x, machine.prize.x);
+
+                machine.a.x /= gcd_x;
+                machine.b.x /= gcd_x;
+                machine.prize.x /= gcd_x;
+
+                const gcd_y = gcd_mul(machine.a.y, machine.b.y, machine.prize.y);
+
+                machine.a.y /= gcd_y;
+                machine.b.y /= gcd_y;
+                machine.prize.y /= gcd_y;
+
+            }
+
             return sum(machines.map(machine => cheapest(machine, 100, 3, 1) ?? 0))
         },
         second: function (input: string): string | number {
-            return 0;
+            const machines = inputToMachines(input, 10000000000000);
+            return sum(machines.map(machine => cheapest(machine, 10000, 3, 1) ?? 0))
         }
     }
 };
