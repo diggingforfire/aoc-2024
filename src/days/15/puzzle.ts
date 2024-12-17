@@ -37,6 +37,38 @@ export const puzzle = () : Puzzle => {
 
     const mark = (y: number, x: number, grid: string[][], marker: string) => grid[y]![x] = marker;
 
+    const moveIt = (startPosition: Pos, moves: string, grid: string[][], boxMarker: string) => {
+        let currentPosition = startPosition;
+
+        for (const move of [...moves?.replaceAll("\r\n", "")!]) {
+            const nextPos = nextPosition(currentPosition, move);
+            const nextValue = gridValue(grid, nextPos);
+
+            if (nextValue == "." || nextValue == "@") {
+                currentPosition = nextPos;
+
+            } else if (nextValue == boxMarker) {
+                let nextNext = nextPosition(nextPos, move);
+                let nextNextValue = gridValue(grid, nextNext);
+
+                let poses = [nextNext];
+                while (nextNextValue == boxMarker) {
+                    nextNext = nextPosition(nextNext, move);
+                    nextNextValue = gridValue(grid, nextNext);
+                    poses.push(nextNext);
+                }
+
+                if (nextNextValue == "." || nextNextValue == "@") {
+                    mark(nextPos.y, nextPos.x, grid, ".");
+                    currentPosition = nextPos;
+                    for (const pos of poses) {
+                        mark(pos.y, pos.x, grid, boxMarker);
+                    }
+                }
+            }
+        }
+    };
+
     return {
         first: function (input: string): string | number {
             const [gridPart, moves] = splitOnDoubleNewLines(input);
@@ -45,35 +77,8 @@ export const puzzle = () : Puzzle => {
             const grid = linesToGrid(lines);
             
             const startPosition: Pos = lines.flatMap((line, y) => [...line!.matchAll(/\@/g)].map(match => ({ y, x: match.index })))[0]!;
-            let currentPosition = startPosition;
 
-            for (const move of [...moves?.replaceAll("\r\n", "")!]) {
-                const nextPos = nextPosition(currentPosition, move);
-                const nextValue = gridValue(grid, nextPos);
-
-                if (nextValue == "." || nextValue == "@") {
-                    currentPosition = nextPos;
-
-                } else if (nextValue == "O") {
-                    let nextNext = nextPosition(nextPos, move);
-                    let nextNextValue = gridValue(grid, nextNext);
-
-                    let poses = [nextNext];
-                    while (nextNextValue == "O") {
-                        nextNext = nextPosition(nextNext, move);
-                        nextNextValue = gridValue(grid, nextNext);
-                        poses.push(nextNext);
-                    }
-
-                    if (nextNextValue == "." || nextNextValue == "@") {
-                        mark(nextPos.y, nextPos.x, grid, ".");
-                        currentPosition = nextPos;
-                        for (const pos of poses) {
-                            mark(pos.y, pos.x, grid, "O");
-                        }
-                    }
-                }
-            }
+            moveIt(startPosition, moves!, grid, "O");
 
             const boxes = grid.flatMap((lines, y) => lines.map((line, x) => ({
                 y,
@@ -84,7 +89,25 @@ export const puzzle = () : Puzzle => {
             return sum(boxes.map(b => 100 * b.y + b.x));
         },
         second: function (input: string): string | number {
-            return 0;
+            const transformedInput = 
+                input.replaceAll("#", "##").replaceAll("O", "[]").replaceAll(".", "..").replaceAll("@", "@.");
+                
+            const [gridPart, moves] = splitOnDoubleNewLines(transformedInput);
+
+            const lines = splitOnNewLines(gridPart!);
+            const grid = linesToGrid(lines);
+            
+            const startPosition: Pos = lines.flatMap((line, y) => [...line!.matchAll(/\@/g)].map(match => ({ y, x: match.index })))[0]!;
+
+            moveIt(startPosition, moves!, grid, "O");
+
+            const boxes = grid.flatMap((lines, y) => lines.map((line, x) => ({
+                y,
+                x,
+                line
+            }))).filter(l => l.line === "O");
+
+            return sum(boxes.map(b => 100 * b.y + b.x));
         }
     };
 };
