@@ -75,12 +75,10 @@ export const puzzle = () : Puzzle => {
             start.visited = true;
             start.previous = grid[start.y]![start.x + 1]!;
 
-            let current = null;
-
             const queue: Node[] = [start];
 
             while (queue.length) {
-                current = queue.shift()!;
+                const current = queue.shift()!;
                 const neighbours = getNeighbours(current, grid);
 
                 for (const neighbour of neighbours) {
@@ -93,13 +91,11 @@ export const puzzle = () : Puzzle => {
                     if (!neighbour.visited || cost < neighbour.cost) {
                         neighbour.visited = true;
                         neighbour.previous = current;
-
                         neighbour.cost = Math.min(neighbour.cost, cost);
 
                         queue.push(neighbour);
                     }
                 }
-
             }
 
             const end = grid.flatMap(line => line.map(node => node)).filter(node => node.label === "E")[0]!;
