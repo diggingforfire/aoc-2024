@@ -32,29 +32,24 @@ const getNeighbours = (node: Node, grid: Node[][]) : Node[] => {
 const hasTurned = (previous: Node, current: Node) => 
     previous && previous.x !== current.x && previous.y !== current.y;
 
-const markShortestPaths = (start: Node, previous: Node | null, grid: Node[][]) => {
-    let next = start;
- 
-    while (next.label !== "S") {
-        next.inShortestPath = true;
+const markShortestPaths = (start: Node, grid: Node[][], previous?: Node) => {
+    let current = start;
+    current.inShortestPath = true;
 
-        if (next.label !== "E" && 
-            next.visitors?.length! > 1
-        ) {
-
-            const visitorsToFollow = next.visitors?.filter(v => v.cost < next.cost || (previous && previous!.cost - v.cost === 2))!;
-
-            for (const v of visitorsToFollow) {
-                markShortestPaths(v, next, grid);
-            }
-
-            break;
-        } else {
-            next = next.previous!;
-        }
+    if (current.label === "S") {
+        return;
     }
+ 
+    if (current.visitors.length > 1) {
+        const lowerCostVisitors = current.visitors
+            .filter(visitor => visitor.cost < current.cost || (previous && previous!.cost - visitor.cost === 2))!;
 
-    next.inShortestPath = true;
+        for (const visitor of lowerCostVisitors) {
+            markShortestPaths(visitor, grid, current);
+        }
+    } else {
+        markShortestPaths(current.previous!, grid, current);
+    }
 }
 
 const renderGrid = (grid: Node[][]) => {
@@ -134,28 +129,27 @@ export const puzzle = () : Puzzle => {
 
         return end;
     }
+    
+    const getSearchResult = (input: string) : [Node, Node[][]] => {
+        const grid = inputToGrid(input);
+
+        const start = grid.flatMap(line => line.map(node => node)).filter(node => node.label === "S")[0]!;
+        start.previous = grid[start.y]![start.x + 1]!;
+
+        const end = search(start, grid);
+
+        return [end, grid];
+    };
 
     return {
         first: function (input: string): string | number {
-            const grid = inputToGrid(input);
-
-            const start = grid.flatMap(line => line.map(node => node)).filter(node => node.label === "S")[0]!;
-            start.previous = grid[start.y]![start.x + 1]!;
-
-            const end = search(start, grid);
-
+            const [end] = getSearchResult(input);
             return end.cost;
         },
+
         second: function (input: string): string | number {
-            
-            const grid = inputToGrid(input);
-
-            const start = grid.flatMap(line => line.map(node => node)).filter(node => node.label === "S")[0]!;
-            start.previous = grid[start.y]![start.x + 1]!;
-
-            const end = search(start, grid);
-            
-            markShortestPaths(end, null, grid);
+            const [end, grid] = getSearchResult(input);
+            markShortestPaths(end, grid);
 
             const inShortestPath = grid.flatMap(nodes => nodes.filter(node => node.inShortestPath));
             return inShortestPath.length;
