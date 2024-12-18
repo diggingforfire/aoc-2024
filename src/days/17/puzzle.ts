@@ -29,7 +29,7 @@ export const puzzle = () : Puzzle => {
                 registers["A"] = Math.floor(numerator / denominator);
             },
             1: (operand: number) => {
-                registers["B"] = registers["B"]! ^ operand;
+                registers["B"] = (registers["B"]! ^ operand) >>> 0;
             },
             2: (operand: number) => {
                 registers["B"] = mod(combo(operand)!, 8);
@@ -42,7 +42,7 @@ export const puzzle = () : Puzzle => {
                 return false;
             },
             4: (_: number) => {
-                registers["B"] = registers["B"]! ^ registers["C"]!;
+                registers["B"] = (registers["B"]! ^ registers["C"]!) >>> 0;
             },
             5: (operand: number) => {
                 output.push(mod(combo(operand)!, 8));
@@ -81,6 +81,7 @@ export const puzzle = () : Puzzle => {
 
         return [program, a, b, c];
     };
+
     return {
         first: function (input: string): string | number {
             const [program, a, b, c] = inputToProgramAndRegisters(input);
@@ -88,6 +89,19 @@ export const puzzle = () : Puzzle => {
             return output.join(",");
         },
         second: function (input: string): string | number {
+            const [program, a, b, c] = inputToProgramAndRegisters(input);
+
+            for (let i = Math.pow(8, program.length - 1); i <= Math.pow(8, program.length); i += 1) {
+                const output = executeProgram(program, i, b, c);
+                if (i % 100000 === 0) {
+                    console.log(`${i}/${Math.pow(8, program.length)}`);
+                }
+
+                if (output.join(",") === program.join(",")) {
+                    console.log(i);
+                    break;
+                }                
+            }
 
             return 0;
         }
