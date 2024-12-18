@@ -66,7 +66,7 @@ const renderGrid = (grid: Node[][]) => {
                     output += node.label;
                 }
             } else {
-                output += `${(node.cost).toString().padStart(2, " ")}${node.marked ? "*" : ""}`;
+                output += `${(node.cost).toString().padStart(2, " ")}${node.inShortestPath ? "*" : ""}`;
             }
 
             output += "\t";
