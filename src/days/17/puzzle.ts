@@ -1,102 +1,91 @@
 import Puzzle from "../../types/Puzzle";
 import { splitOnNewLines } from "../../utils/input";
+import { mod } from "../../utils/math";
 
 export const puzzle = () : Puzzle => {
-    const mod = (n: number, d: number) => ((n % d) + d) % d;
+
+    const executeProgram = (program: number[], a: number, b: number, c: number) : number[] => {
+        const registers: { [name: string]: number } = {
+            "A": a,
+            "B": b,
+            "C": c,
+        };
+
+        const output: number[] = [];
+        let instructionPointer = 0;
+        let opcode;
+
+        const combo = (operand: number) => {
+            if (operand >= 0 && operand <= 3) return operand;
+            if (operand === 4) return registers["A"];
+            if (operand === 5) return registers["B"];
+            if (operand === 6) return registers["C"];
+        };
+
+        const instructions: { [opcode: number]: (operand: number) => boolean | void } = {
+            0: (operand: number) => {
+                const numerator = registers["A"]!;
+                const denominator = Math.pow(2, combo(operand)!);
+                registers["A"] = Math.floor(numerator / denominator);
+            },
+            1: (operand: number) => {
+                registers["B"] = registers["B"]! ^ operand;
+            },
+            2: (operand: number) => {
+                registers["B"] = mod(combo(operand)!, 8);
+            },
+            3: (operand: number) => {
+                if (registers["A"] !== 0) {
+                    instructionPointer = operand;
+                    return true;
+                }
+                return false;
+            },
+            4: (_: number) => {
+                registers["B"] = registers["B"]! ^ registers["C"]!;
+            },
+            5: (operand: number) => {
+                output.push(mod(combo(operand)!, 8));
+            },
+            6: (operand: number) => {
+                const numerator = registers["A"]!;
+                const denominator = Math.pow(2, combo(operand)!);
+                registers["B"] = Math.floor(numerator / denominator);
+            },
+            7: (operand: number) => {
+                const numerator = registers["A"]!;
+                const denominator = Math.pow(2, combo(operand)!);
+                registers["C"] = Math.floor(numerator / denominator);
+            }
+        };
+
+        while ((opcode = program[instructionPointer]) !== undefined) {
+            const operand = program[instructionPointer + 1]!;
+            const skipInstructionPointerIncrement = instructions[opcode]!(operand);
+            if (!skipInstructionPointerIncrement) {
+                instructionPointer += 2;
+            }
+        }
+
+        return output;
+    };
+
+    const inputToProgramAndRegisters = (input: string) : [number[], number, number, number] => {
+        const lines = splitOnNewLines(input);
+            
+        let a = parseInt(lines[0]?.split(":")[1]!);
+        let b = parseInt(lines[1]?.split(":")[1]!);
+        let c = parseInt(lines[2]?.split(":")[1]!);
+
+        const program = lines[3]?.split(":")[1]!.split(",").map(n => parseInt(n))!;
+
+        return [program, a, b, c];
+    };
     return {
         first: function (input: string): string | number {
-            const lines = splitOnNewLines(input);
-            
-            let A = parseInt(lines[0]?.split(":")[1]!);
-            let B = parseInt(lines[1]?.split(":")[1]!);
-            let C = parseInt(lines[2]?.split(":")[1]!);
-
-            const combo = (op: number) => {
-                if (op >= 0 && op <= 3) return op;
-                if (op === 4) return A;
-                if (op === 5) return B;
-                if (op === 6) return C;
-                return -1;
-            };
-
-            const program = lines[3]?.split(":")[1]!.split(",").map(c => parseInt(c))!;
-
-            let i = 0;
-            for (; i < Number.MAX_VALUE; i++) {
-                if (i % 10000 === 0) {
-                    console.log(i);
-                }
-    
-                let output = "";
-                let ip = 0;
-                let opcode;
-                let resolvedOperand = 0;
-                let result = 0;
-
-                A = i;
-    
-                while ((opcode = program[ip]) !== undefined) {
-                    const operand = program[ip + 1]!;
-    
-                    switch (opcode) {
-                        case 0:
-                            resolvedOperand = combo(operand);
-                            const numerator = A;
-                            const denom = Math.pow(2, resolvedOperand);
-                            result = Math.floor(numerator / denom);
-                            A = result;
-                            break;
-                        case 1:
-                            result = B ^ operand >>> 0;
-                            B = result;
-                            break;
-                        case 2:
-                            resolvedOperand = combo(operand);
-                            result = mod(resolvedOperand, 8);
-                            B = result;
-                            break;
-                        case 3:
-                            if (A !== 0) {
-                                ip = operand;
-                                continue;
-                            }
-                            break;
-                        case 4:
-                            result = B ^ C >>> 0;
-                            B = result;
-                            break;
-                        case 5:
-                            resolvedOperand = combo(operand);
-                            const modded = mod(resolvedOperand, 8);
-                            output += modded;
-                            break;
-                        case 6:
-                            resolvedOperand = combo(operand);
-                            const numeratorr = A;
-                            const denomr = Math.pow(2, resolvedOperand);
-                            result = Math.floor(numeratorr / denomr);
-                            B = result;
-                            break;
-                        case 7:
-                            resolvedOperand = combo(operand);
-                            const numeratorrr = A;
-                            const denomrr = Math.pow(2, resolvedOperand);
-                            result = Math.floor(numeratorrr / denomrr);
-                            C = result;
-                            break;
-                    }
-                    ip += 2;
-                }
-
-                if ([...output].join(",") === program.join(",")) {
-                    break;
-                }
-
-            }
-
-
-            return i
-            //return [...output].join(",");
+            const [program, a, b, c] = inputToProgramAndRegisters(input);
+            const output = executeProgram(program, a, b, c);
+            return output.join(",");
         },
         second: function (input: string): string | number {
 

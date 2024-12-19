@@ -5,13 +5,11 @@ import { splitOnNewLines } from "../../utils/input";
 type Node = {
     x: number;
     y: number;
-    visited: boolean;
     cost: number;
     label: string;
-    previous: Node;
-    marked?: boolean;
-    turnPoint?: boolean;
-    //visitors?: Node[];
+    inShortestPath: boolean;
+    visitors: Node[];
+    previous?: Node;
 };
 
 const directions: {x: number, y: number}[] = [
@@ -34,38 +32,32 @@ const getNeighbours = (node: Node, grid: Node[][]) : Node[] => {
 const hasTurned = (previous: Node, current: Node) => 
     previous && previous.x !== current.x && previous.y !== current.y;
 
-// const markShortestPaths = (start: Node, grid: Node[][]) => {
-//     let t = start;
+const markShortestPaths = (start: Node, grid: Node[][], previous?: Node) => {
+    let current = start;
+    current.inShortestPath = true;
+
+    if (current.label === "S") {
+        return;
+    }
  
-//     while (t.label !== "S") {
-//         const next = grid[t.y]![t.x]!;
-//         next.marked = true;
+    if (current.visitors.length > 1) {
+        const lowerCostVisitors = current.visitors
+            .filter(visitor => visitor.cost < current.cost || (previous && previous!.cost - visitor.cost === 2))!;
 
-//         if (t.x === 3 && t.y === 9) {
-//             console.log("hmm");
-//         }
+        for (const visitor of lowerCostVisitors) {
+            markShortestPaths(visitor, grid, current);
+        }
+    } else {
+        markShortestPaths(current.previous!, grid, current);
+    }
+}
 
-//         if (t.label !== "E" && t.visitors?.length! === 2 && (t.visitors![0]!.cost === t.visitors![1]!.cost || (Math.abs(t.visitors![0]!.cost - t.visitors![1]!.cost) === 1000))) {
-//             markShortestPaths(t.visitors![0]!, grid);
-//             markShortestPaths(t.visitors![1]!, grid);
-//             break;
-//         } else {
-//             t = t.previous;
-//         }
-//     }
-
-//     t.marked = true;
-// }
-
-const renderGrid = (grid: Node[][], grid2: Node[][]) => {
+const renderGrid = (grid: Node[][]) => {
     let output = "";
 
     for (let y = 0; y < grid.length; y++) {
         for (let x = 0; x < grid[0]!.length; x++) {
             const node = grid[y]![x]!;
-            const node2 = grid2[y]![x]!;
-
-
 
             if (node.label === "#") {
                 if (x > 0 && x < grid[0]!.length - 1) {
@@ -74,7 +66,7 @@ const renderGrid = (grid: Node[][], grid2: Node[][]) => {
                     output += node.label;
                 }
             } else {
-                output += `${(node.cost + node2.cost).toString().padStart(2, " ")}${""}`;
+                output += `${(node.cost).toString().padStart(2, " ")}${node.inShortestPath ? "*" : ""}`;
             }
 
             output += "\t";
@@ -98,8 +90,8 @@ export const puzzle = () : Puzzle => {
             y,
             cost: Number.MAX_VALUE,
             label: char,
-            visited: false,
-
+            visitors: [],
+            inShortestPath: false
         }) as Node));
 
         return grid;
@@ -107,10 +99,6 @@ export const puzzle = () : Puzzle => {
 
     const search = (start: Node, grid: Node[][]) => {
         start.cost = 0;
-
-        start.visited = true;
-
-
         const queue: Node[] = [start];
 
         while (queue.length) {
@@ -118,28 +106,20 @@ export const puzzle = () : Puzzle => {
             const neighbours = getNeighbours(current, grid);
 
             for (const neighbour of neighbours) {
-                // if (!neighbour.visitors) {
-                //     neighbour.visitors = [];
-                // }
                 let cost = current.cost + 1;
                 
-                if (hasTurned(current.previous, neighbour)) {
-                    current.turnPoint = true;
+                if (hasTurned(current.previous!, neighbour)) {
                     cost += 1000;
                 }    
 
-                // if (!neighbour.visited || cost <= neighbour.cost || Math.abs(neighbour.cost - cost) === 1000) {
-                //     if (!neighbour.visitors.some(n => n.x === current.x && n.y === current.y)) {
-                //         neighbour.visitors.push(current)
-                //     }    
-                // }
+                if (!neighbour.visitors.some(n => n.x === current.x && n.y === current.y)) {
+                    neighbour.visitors.push(current);
+                }  
 
-                if (!neighbour.visited || cost <= neighbour.cost) {
-
-                    neighbour.visited = true;
+                if (cost < neighbour.cost) {
                     neighbour.previous = current;
-                    neighbour.cost = Math.min(neighbour.cost, cost);
-
+                    neighbour.cost = cost;
+                    
                     queue.push(neighbour);
                 }
             }
@@ -149,61 +129,30 @@ export const puzzle = () : Puzzle => {
 
         return end;
     }
+    
+    const getSearchResult = (input: string) : [Node, Node[][]] => {
+        const grid = inputToGrid(input);
+
+        const start = grid.flatMap(line => line.map(node => node)).filter(node => node.label === "S")[0]!;
+        start.previous = grid[start.y]![start.x + 1]!;
+
+        const end = search(start, grid);
+
+        return [end, grid];
+    };
 
     return {
         first: function (input: string): string | number {
-            return 0;
-            const grid = inputToGrid(input);
-
-            const start = grid.flatMap(line => line.map(node => node)).filter(node => node.label === "S")[0]!;
-            start.previous = grid[start.y]![start.x + 1]!;
-
-            const end = search(start, grid);
-
-            renderGrid(grid, grid);
-
+            const [end] = getSearchResult(input);
             return end.cost;
         },
+
         second: function (input: string): string | number {
-            //return 0;
-            const grid = inputToGrid(input);
-            const start = grid.flatMap(line => line.map(node => node)).filter(node => node.label === "S")[0]!;
-            start.previous = grid[start.y]![start.x + 1]!;
-            const end = search(start, grid);
+            const [end, grid] = getSearchResult(input);
+            markShortestPaths(end, grid);
 
-            const grid2 = inputToGrid(input);
-            const end2 = grid2.flatMap(line => line.map(node => node)).filter(node => node.label === "E")[0]!;
-            const start2 = grid2.flatMap(line => line.map(node => node)).filter(node => node.label === "S")[0]!;
-            search(end2, grid2);
-            start2.cost += 1000;
-
-            renderGrid(grid, grid2);
-            //renderGrid(grid2, grid2 );
-            
-           // markShortestPaths(end, grid);
-
-            //renderGrid(grid2);
-
-            //const nodes = grid.flatMap(line => line.map(n => n)).filter(node => node.marked);
-
-            let i = 0;
-            for (let y = 0; y < grid.length; y++) {
-                for (let x = 0; x < grid[0]!.length; x++) {
-                    const node1 = grid[y]![x]!;
-                    const node2 = grid2[y]![x]!;
-                    if (node1.turnPoint && node1.cost + node2.cost !== end.cost) {
-                        node1.cost += 1000;
-                    }
-
-                    if (node1.cost + node2.cost === end.cost) {
-                        i++;
-                    }
-                }
-            }
-            
-            // 607 too high
-            // 608 too high
-            return i;
+            const inShortestPath = grid.flatMap(nodes => nodes.filter(node => node.inShortestPath));
+            return inShortestPath.length;
         }
     };
 };

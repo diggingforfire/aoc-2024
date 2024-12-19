@@ -9,15 +9,12 @@ type Node = {
     label: string;
 };
 
-
 export const puzzle = () : Puzzle => {
-    const inputToGrid = (input: string) => {
-        const coords = 
-            splitOnNewLines(input).map(line => ({ x : parseInt(line.split(",")[0]!), y: parseInt(line.split(",")[1]!) })).slice(0, 1024);
-        const xs = coords.map(c => c.x);
-        const ys = coords.map(c => c.y);
-        const maxX = Math.max(...xs) + 1;
-        const maxY = Math.max(...ys) + 1;
+    const inputToGridAndCoords = (input: string, numberOfBytes: number) : [Node[][], {x: number, y: number}[]] => {
+        let coords = splitOnNewLines(input).map(line => ({ x : parseInt(line.split(",")[0]!), y: parseInt(line.split(",")[1]!) }));
+
+        const maxX = Math.max(...coords.map(c => c.x)) + 1;
+        const maxY = Math.max(...coords.map(c => c.y)) + 1;
 
         const grid: Node[][] = [];
         
@@ -35,14 +32,13 @@ export const puzzle = () : Puzzle => {
             grid.push(arr);
         }
 
-        for (const coord of coords) {
+        for (const coord of coords.slice(0, numberOfBytes)) {
             grid[coord.y]![coord.x]!.label = "#";
         }
 
-        return grid;
+        return [grid, coords];
     }
 
-    
     const directions: {x: number, y: number}[] = [
         { x: 0, y: - 1},
         { x: 1, y: 0 },
@@ -60,34 +56,47 @@ export const puzzle = () : Puzzle => {
         return neighbours;
     };
 
-    
+    const search = (grid: Node[][]) => {
+        const start = grid[0]![0]!;
+        start.visited = true;
+        start.cost = 0;
+        const queue = [start];
+
+        while (queue.length) {
+            const current = queue.shift()!;
+            const neighbours = getNeighbours(current, grid);
+
+            for (const neighbour of neighbours) {
+                if (!neighbour.visited) {
+                    neighbour.visited = true;
+                    const cost = current.cost + 1;
+                    neighbour.cost = Math.min(neighbour.cost, cost);
+                    queue.push(neighbour);
+                }
+            }
+        }
+
+        return grid[grid.length - 1]![grid[0]!.length - 1]!;
+    };
+
     return {
         first: function (input: string): string | number {
-            const grid = inputToGrid(input)
+            const [grid] = inputToGridAndCoords(input, 1024);
+            const end = search(grid);
+            return end.cost;
+        },
 
-            const start = grid[0]![0]!;
-            start.visited = true;
-            start.cost = 0;
-            const queue = [start];
-
-            while (queue.length) {
-                const current = queue.shift()!;
-                const neighbours = getNeighbours(current, grid);
-
-                for (const neighbour of neighbours) {
-                    if (!neighbour.visited) {
-                        neighbour.visited = true;
-                        const cost = current.cost + 1;
-                        neighbour.cost = Math.min(neighbour.cost, cost);
-                        queue.push(neighbour);
-                    }
+        second: function (input: string): string | number {
+            let i = 0;
+            while (i < Number.MAX_VALUE) {
+                const [grid, coords] = inputToGridAndCoords(input, i);
+                const end = search(grid);
+                if (end.cost === Number.MAX_VALUE) {
+                    return `${coords[i - 1]!.x},${coords[i - 1]!.y}`;
                 }
-                
+                i++;
             }
 
-            return 0;
-        },
-        second: function (input: string): string | number {
             return 0;
         }
     }
