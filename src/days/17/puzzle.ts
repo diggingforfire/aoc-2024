@@ -1,6 +1,7 @@
 import Puzzle from "../../types/Puzzle";
+import { sum } from "../../utils/collection";
 import { splitOnNewLines } from "../../utils/input";
-import { mod } from "../../utils/math";
+import { mod, modBig } from "../../utils/math";
 
 export const puzzle = () : Puzzle => {
 
@@ -13,10 +14,10 @@ export const puzzle = () : Puzzle => {
 
         const output: number[] = [];
         let instructionPointer = 0;
-        let opcode;
+        let opcode = 0;
 
-        const combo = (operand: number) => {
-            if (operand >= 0 && operand <= 3) return operand;
+        const combo = (operand: number) : number | undefined => {
+            if (operand >= (0) && operand <= 3) return operand;
             if (operand === 4) return registers["A"];
             if (operand === 5) return registers["B"];
             if (operand === 6) return registers["C"];
@@ -25,7 +26,7 @@ export const puzzle = () : Puzzle => {
         const instructions: { [opcode: number]: (operand: number) => boolean | void } = {
             0: (operand: number) => {
                 const numerator = registers["A"]!;
-                const denominator = Math.pow(2, combo(operand)!);
+                const denominator = 2 ** combo(operand)!;
                 registers["A"] = Math.floor(numerator / denominator);
             },
             1: (operand: number) => {
@@ -42,26 +43,26 @@ export const puzzle = () : Puzzle => {
                 return false;
             },
             4: (_: number) => {
-                registers["B"] = (registers["B"]! ^ registers["C"]!) >>> 0;
+                registers["B"] = (registers["B"]! ^ registers["C"]!) >>> 0;;
             },
             5: (operand: number) => {
                 output.push(mod(combo(operand)!, 8));
             },
             6: (operand: number) => {
                 const numerator = registers["A"]!;
-                const denominator = Math.pow(2, combo(operand)!);
+                const denominator = 2 ** combo(operand)!;
                 registers["B"] = Math.floor(numerator / denominator);
             },
             7: (operand: number) => {
                 const numerator = registers["A"]!;
-                const denominator = Math.pow(2, combo(operand)!);
+                const denominator = 2 ** combo(operand)!;
                 registers["C"] = Math.floor(numerator / denominator);
             }
         };
 
-        while ((opcode = program[instructionPointer]) !== undefined) {
-            const operand = program[instructionPointer + 1]!;
-            const skipInstructionPointerIncrement = instructions[opcode]!(operand);
+        while ((opcode = program[Number(instructionPointer)]!) !== undefined) {
+            const operand = program[Number(instructionPointer) + 1]!;
+            const skipInstructionPointerIncrement = instructions[Number(opcode)]!(operand);
             if (!skipInstructionPointerIncrement) {
                 instructionPointer += 2;
             }
@@ -88,22 +89,19 @@ export const puzzle = () : Puzzle => {
             const output = executeProgram(program, a, b, c);
             return output.join(",");
         },
-        second: function (input: string): string | number {
-            const [program, a, b, c] = inputToProgramAndRegisters(input);
+        second: function (input: string): string | number  {
+            const [program, _, b, c] = inputToProgramAndRegisters(input);
 
-            for (let i = Math.pow(8, program.length - 1); i <= Math.pow(8, program.length); i += 1) {
-                const output = executeProgram(program, i, b, c);
-                if (i % 100000 === 0) {
-                    console.log(`${i}/${Math.pow(8, program.length)}`);
-                }
+            // for (let i = 0; i < 1000; i++) {
+            //     const output = executeProgram(program, number(i), b, c);
+            //     console.log(i + "\t" + output.join(","));
+            // }
 
-                if (output.join(",") === program.join(",")) {
-                    console.log(i);
-                    break;
-                }                
-            }
+            const desiredA = sum(program.map((n, i) => (8 ** (i+1)) * n));
 
-            return 0;
+            // 14892336084115 too low
+            // 119138688672528 too high
+            return desiredA;
         }
     }
 };
