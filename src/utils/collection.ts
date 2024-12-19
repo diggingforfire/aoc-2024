@@ -12,10 +12,11 @@ const groupBy = <T, K extends keyof any>(arr: T[], key: (i: T) => K) =>
 const combinations = <T>(array: T[]) => 
   array.flatMap((item1, index) => array.slice(index + 1).map(item2 => ({item1, item2})));
 
-const permutations = <T>(xs: T[]) : T[][] => {
+const permutations = <T>(xs: T[], length: number) : T[][] => {
   if (!xs.length) return [[]];
+  if (length === 1) return xs.map(x => [x]);
   return xs.flatMap(x => {
-    return permutations(xs.filter(v => v!==x)).map(vs => [x, ...vs]);
+    return permutations(xs.filter(v => v!==x), length - 1).map(vs => [x, ...vs]);
   });
 };
 
