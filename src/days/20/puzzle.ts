@@ -75,7 +75,7 @@ const renderGrid = (grid: Node[][]) => {
 };
 
 export const puzzle = () : Puzzle => {
-    const search = (start: Node, grid: Node[][]) : [Node, Node[]] => {
+    const search = (start: Node, grid: Node[][]) : Node[] => {
         start.cost = 0;
         start.visited = true;
         
@@ -109,33 +109,62 @@ export const puzzle = () : Puzzle => {
             }
         }
 
-        const end = grid.flatMap(line => line.map(node => node)).filter(node => node.label === "E")[0]!;
+        return encounteredObstacles;
+    }
 
-        return [end, encounteredObstacles];
+    const search2 = (start: Node, grid: Node[][]) : number => {
+        start.cost = 0;
+        start.visited = true;
+        
+        const queue: Node[] = [start];
+
+        while (queue.length) {
+            const current = queue.shift()!;
+            const neighbourNodes = getNeighbours(current, grid);
+            
+            const neighbours = neighbourNodes.filter(n => n.label !== "#");
+
+            for (const neighbour of neighbours) {
+
+                if (!neighbour.visited) {
+                    neighbour.visited = true;
+                    queue.push(neighbour);
+                    
+                    let cost = current.cost + 1;
+                    if (neighbour.cost !== Number.MAX_VALUE && cost < neighbour.cost) {
+                        return neighbour.cost - cost;
+                    }
+                    neighbour.cost = Math.min(neighbour.cost, cost);          
+                }
+            }
+        }
+
+        return 0;
     }
 
     return {
         first: function (input: string): string | number {
             const grid = inputToGrid(input); 
             const start = grid.flatMap(line => line.map(node => node)).filter(node => node.label === "S")[0]!;
-            const [end, encounteredObstacles] = search(start, grid);
+            const encounteredObstacles = search(start, grid);
 
-            let saves: number[] = [];
+            let secondsSaved: number[] = [];
 
-            renderGrid(grid);
+            for (const obstacle of encounteredObstacles){ 
 
-            let i = 1;
-            for (const o of encounteredObstacles){
-                console.log(`${i++}/${encounteredObstacles.length}`);
-                const gridCopy = inputToGrid(input); 
-                gridCopy[o.y]![o.x]!.label = ".";
-                const [newEnd, _] = search(start, gridCopy);
-                saves.push(end.cost - newEnd.cost);
+                const gridCopy = JSON.parse(JSON.stringify(grid));
+                
+                for (let y = 0; y < gridCopy.length; y++) {
+                    for (let x = 0; x < gridCopy[0].length; x++) {
+                        gridCopy[y]![x]!.visited = false;
+                    }
+                }
+
+                gridCopy[obstacle.y]![obstacle.x].label = '.'; 
+                secondsSaved.push(search2({...start}, gridCopy));
             }
 
-            saves = saves.toSorted((a, b) => a - b);
-
-            return saves.filter(cheat => cheat >= 100).length;
+            return secondsSaved.filter(n => n >= 100).length;
         },
         second: function (input: string): string | number {
             return 0;
